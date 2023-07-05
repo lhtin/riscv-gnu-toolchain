@@ -8,3 +8,6 @@ Makefile
 /build-*/
 /install-newlib-nano/
 /stamps/
+lab
+patchs
+install-*

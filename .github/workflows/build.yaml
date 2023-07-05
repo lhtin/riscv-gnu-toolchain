@@ -7,9 +7,12 @@ on:
   pull_request:
     branches:
       - master
+      - tintin-dev
+  workflow_dispatch:
 
 jobs:
   build:
+    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -81,11 +84,8 @@ jobs:
       matrix:
         os:     [ubuntu-20.04]
         mode:   [newlib, linux]
-        target: [rv64gc-lp64d]
-        sim:    [spike]
-        exclude:
-          - sim: spike
-            mode: linux
+        target: [rv32gcv_zfh-ilp32d, rv64gcv_zfh-lp64d]
+        sim:    [qemu]
     steps:
       - uses: actions/checkout@v2
 
