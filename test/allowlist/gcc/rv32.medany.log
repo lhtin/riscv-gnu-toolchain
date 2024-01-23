@@ -1,0 +1,9 @@
+# timeout
+FAIL: gcc.target/riscv/rvv/autovec/binop/narrow_run-1.c
+
+FAIL: g++.dg/cpp0x/udlit-extended-id-1.C  -std=c++14
+FAIL: g++.dg/cpp0x/udlit-extended-id-1.C  -std=c++17
+FAIL: g++.dg/cpp0x/udlit-extended-id-1.C  -std=c++20
+FAIL: g++.dg/cpp0x/udlit-extended-id-3.C  -std=c++14
+FAIL: g++.dg/cpp0x/udlit-extended-id-3.C  -std=c++17
+FAIL: g++.dg/cpp0x/udlit-extended-id-3.C  -std=c++20

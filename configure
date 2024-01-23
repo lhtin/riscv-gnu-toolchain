@@ -605,6 +605,7 @@ with_system_zlib
 configure_host
 target_cxxflags
 target_cflags
+gcc_extra_configure_flags
 cmodel
 gcc_checking
 musl_multilib_names
@@ -690,6 +691,7 @@ with_multilib_generator
 with_extra_multilib_test
 enable_gcc_checking
 with_cmodel
+with_gcc_extra_configure_flags
 with_target_cflags
 with_target_cxxflags
 with_host
@@ -1366,6 +1368,8 @@ Optional Packages:
                           --with-extra-multilib-test="rv64gcv-lp64;rv64gcv_zba-lp64"
   --with-cmodel           Select the code model to use when building libc and
                           libgcc [--with-cmodel=medlow]
+  --with-gcc-extra-configure-flags
+                          Add extra configure flags for GCC configure file
   --with-target-cflags    Add extra target flags for C for library code
   --with-target-cxxflags  Add extra target flags for C++ for library code
   --with-host=x86_64-w64-mingw32
@@ -3513,6 +3517,14 @@ else
   cmodel=-mcmodel=medlow
 
 fi
+
+
+# Check whether --with-gcc_extra_configure_flags was given.
+if test "${with_gcc_extra_configure_flags+set}" = set; then :
+  withval=$with_gcc_extra_configure_flags;
+fi
+
+gcc_extra_configure_flags=$with_gcc_extra_configure_flags
 
 
 # Check whether --with-target_cflags was given.

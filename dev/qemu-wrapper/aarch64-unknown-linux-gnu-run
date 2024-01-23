@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -x
+
+qemu-aarch64 -L ${SYSROOT} -cpu neoverse-n2 "$@"

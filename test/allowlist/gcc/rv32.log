@@ -1,0 +1,14 @@
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-10.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-10.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-10.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-11.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-11.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-11.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-8.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-8.c
+FAIL: gcc.dg/analyzer/out-of-bounds-diagram-8.c
+
+FAIL: g++.dg/modules/xtreme-header-5_c.C
+FAIL: g++.dg/modules/xtreme-header-5_c.C
+FAIL: g++.target/riscv/rvv/base/bug-14.C
+FAIL: g++.target/riscv/rvv/base/bug-9.C

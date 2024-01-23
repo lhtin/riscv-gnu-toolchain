@@ -37,8 +37,18 @@ def usage():
     print("%s <toolname> <libc>" \
           " <white-list-base-dir> <testsuite.sum>" % sys.argv[0])
 
+def get_list (ele):
+    """ Return all possible value of current dimension
+    """
+    result = [""]
+    if isinstance (ele, list):
+        for item in ele:
+            result.append (item + ".")
+    else:
+        result.append (ele + ".")
+    return result
 
-def get_white_list_files(raw_arch, abi, libc, white_list_base_dir):
+def get_white_list_files(libc, raw_arch, abi, cmodel, sim, white_list_base_dir):
     """ Return white file list according the arch, abi, libc name and component.
     """
     white_list_files = []
@@ -56,51 +66,14 @@ def get_white_list_files(raw_arch, abi, libc, white_list_base_dir):
     libc_filename = "common.log"
     append_if_exist(libc_filename)
 
-    libc_filename = "%s.log" % (libc)
-    append_if_exist(libc_filename)
-
-    filename = "%s.log" % (arch.base_arch)
-    append_if_exist(filename)
-
-    filename = "%s.log" % (abi)
-    append_if_exist(filename)
-
-    filename = "%s.%s.log" % (arch.base_arch, abi)
-    append_if_exist(filename)
-
-    filename = "%s.%s.log" % (libc, arch.base_arch)
-    append_if_exist(filename)
-
-    filename = "%s.%s.log" % (libc, abi)
-    append_if_exist(filename)
-
-    filename = "%s.%s.%s.log" % (libc, arch.base_arch, abi)
-    append_if_exist(filename)
-
-    for ext in arch.ext:
-        filename = "%s.log" % (ext)
-        append_if_exist(filename)
-
-        filename = "%s.%s.log" % (arch.base_arch, ext)
-        append_if_exist(filename)
-
-        filename = "%s.%s.log" % (ext, abi)
-        append_if_exist(filename)
-
-        filename = "%s.%s.%s.log" % (arch.base_arch, ext, abi)
-        append_if_exist(filename)
-
-        filename = "%s.%s.log" % (libc, ext)
-        append_if_exist(filename)
-
-        filename = "%s.%s.%s.log" % (libc, arch.base_arch, ext)
-        append_if_exist(filename)
-
-        filename = "%s.%s.%s.log" % (libc, ext, abi)
-        append_if_exist(filename)
-
-        filename = "%s.%s.%s.%s.log" % (libc, arch.base_arch, ext, abi)
-        append_if_exist(filename)
+    for a1 in get_list(libc):
+        for a2 in get_list(arch.base_arch):
+            for a3 in get_list(arch.ext):
+                for a4 in get_list(abi):
+                    for a5 in get_list(cmodel):
+                        for a6 in get_list(sim):
+                            filename = "%s%s%s%s%s%slog" % (a1, a2, a3, a4, a5, a6)
+                            append_if_exist(filename)
 
     return white_list_files
 
@@ -168,18 +141,22 @@ def read_sum(sum_files):
     return unexpected_results
 
 
-def get_white_list(arch, abi, libc, white_list_base_dir, is_gcc):
+def get_white_list(libc, arch, abi, cmodel, sim, white_list_base_dir, is_gcc):
     white_list_files = \
-        get_white_list_files(arch, abi, libc, white_list_base_dir)
+        get_white_list_files(libc, arch, abi, cmodel, sim, white_list_base_dir)
     white_list = read_white_lists(white_list_files, is_gcc)
     return white_list
 
 
 
-def filter_result(tool, libc, white_list_base_dir, unexpected_results):
+def filter_result(tool, libc, sim, white_list_base_dir, unexpected_results):
     summary = dict()
     any_fail = False
     is_gcc = tool == 'gcc'
+    arch = ""
+    abi = ""
+    cmodel = ""
+    expected_failed_result_list = []
     # Filter with white list.
     for testtool, variation_unexpected_result in unexpected_results.items():
         for variation, unexpected_result in variation_unexpected_result.items():
@@ -199,7 +176,7 @@ def filter_result(tool, libc, white_list_base_dir, unexpected_results):
                     other_args.append(info)
 
             white_list = \
-                get_white_list(arch, abi, libc,
+                get_white_list(libc, arch, abi, cmodel, sim,
                                os.path.join(white_list_base_dir, tool),
                                is_gcc)
             # filter!
@@ -214,6 +191,7 @@ def filter_result(tool, libc, white_list_base_dir, unexpected_results):
                               any(map(lambda x:ur.startswith(x),
                                       white_list[key])):
                         # This item can be ignored
+                        expected_failed_result_list.append (ur.split(' ')[0] + " " + key)
                         continue
                     else:
                         unexpected_result_list.append(ur)
@@ -230,18 +208,33 @@ def filter_result(tool, libc, white_list_base_dir, unexpected_results):
                         unexpected_result_list.append(ur)
                         fail_count += 1
                         any_fail = True
+                    else:
+                        expected_failed_result_list.append(ur)
 
                 if config not in summary:
                     summary[config] = dict()
                 summary[config][testtool] = fail_count
 
+            if len(expected_failed_result_list) != 0:
+                print ("\n\t\t=== %s: Expected fails for %s %s %s %s %s ===" \
+                       % (testtool, arch, abi, cmodel, sim, " ".join(other_args)))
+                for ur in expected_failed_result_list:
+                    print (ur)
 
             if len(unexpected_result_list) != 0:
-                print ("\t\t=== %s: Unexpected fails for %s %s %s %s ===" \
-                       % (testtool, arch, abi, cmodel, " ".join(other_args)))
+                print ("\n\t\t=== %s: Unexpected fails for %s %s %s %s %s ===" \
+                       % (testtool, arch, abi, cmodel, sim, " ".join(other_args)))
                 for ur in unexpected_result_list:
                     print (ur)
 
+    expected_failed_but_success_result_list = []
+    for value in white_list.values():
+        expected_failed_but_success_result_list += list(set(value).difference(expected_failed_result_list))
+    if len(expected_failed_but_success_result_list) != 0:
+      print ("\n\t\t=== Expected fails but success for %s %s %s %s %s ===" \
+        % (arch, abi, cmodel, sim, " ".join(other_args)))
+      for key in set(expected_failed_but_success_result_list):
+        print (key)
 
     # Generate summary report.
     if tool == 'gcc':
@@ -255,10 +248,10 @@ def filter_result(tool, libc, white_list_base_dir, unexpected_results):
     bar = " |".join(bar_item)
     print ("\n               ========= Summary of %s testsuite =========" % tool)
     if is_gcc:
-        print ("                            | # of unexpected case / # of unique unexpected case")
+        print ("                             | # of unexpected case / # of unique unexpected case")
     else:
-        print ("                            | # of unexpected case")
-    print ("                            |%s |" % bar)
+        print ("                             | # of unexpected case")
+    print ("                             |%s |" % bar)
     for config, result in summary.items():
         arch, abi, cmodel, other_args = config
         print (" %10s/ %6s/ %6s |" % (arch, abi, cmodel), end='')
@@ -286,15 +279,17 @@ def main():
     if len(sys.argv) < 5:
         usage()
         sys.exit()
-    tool, libc, white_list_base_dir, sum_files = sys.argv[1:5]
+    tool, libc, sim, white_list_base_dir, sum_files = sys.argv[1:6]
 
     rv = 0
 
     sum_files = sum_files.split(',')
     unexpected_results = read_sum(sum_files)
     if tool in ['gcc', 'binutils']:
-        rv = filter_result(tool, libc, white_list_base_dir,
+        rv = filter_result(tool, libc, sim, white_list_base_dir,
                            unexpected_results)
+        if rv != 0:
+            print ("\nFound unexpexted fails!")
     else:
         print ("Unsupported tool: `%s`" % tool)
         rv = 1

@@ -1,0 +1,14 @@
+build
+binutils
+dejagnu
+gcc*
+gdb
+glibc
+newlib
+pk
+qemu-8.2.1*
+spike
+patchs
+tags
+lab
+__pycache__

@@ -185,6 +185,13 @@ AS_IF([test "x$with_cmodel" != x],
 	[AC_SUBST(cmodel, -mcmodel=$with_cmodel)],
 	[AC_SUBST(cmodel, -mcmodel=medlow)])
 
+AC_ARG_WITH(gcc_extra_configure_flags,
+	[AS_HELP_STRING([--with-gcc-extra-configure-flags],
+		[Add extra configure flags for GCC configure file])],
+	[],
+	[]
+	)
+AC_SUBST(gcc_extra_configure_flags, $with_gcc_extra_configure_flags)
 AC_ARG_WITH(target_cflags,
 	[AS_HELP_STRING([--with-target-cflags],
 		[Add extra target flags for C for library code])],

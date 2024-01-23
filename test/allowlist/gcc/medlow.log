@@ -1,0 +1,2 @@
+# relocation truncated to fit: R_RISCV_GPREL_I against `.LANCHOR1'
+FAIL: gcc.target/riscv/rvv/autovec/gather-scatter/gather_load_run-7.c

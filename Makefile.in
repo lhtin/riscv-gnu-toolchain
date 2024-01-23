@@ -32,6 +32,7 @@ else
 gccsrcdir := $(abspath $(GCC_SRCDIR))
 endif
 
+GCC_EXTRA_CONFIGURE_FLAGS ?= @gcc_extra_configure_flags@
 WITH_ARCH ?= @WITH_ARCH@
 WITH_ABI ?= @WITH_ABI@
 WITH_TUNE ?= @WITH_TUNE@
@@ -91,16 +92,16 @@ GDB_TARGET_FLAGS := --with-expat=yes $(GDB_TARGET_FLAGS_EXTRA)
 GDB_NATIVE_FLAGS := $(GDB_NATIVE_FLAGS_EXTRA)
 
 GLIBC_TARGET_FLAGS := $(GLIBC_TARGET_FLAGS_EXTRA)
-GLIBC_CC_FOR_TARGET ?= $(LINUX_TUPLE)-gcc
-GLIBC_CXX_FOR_TARGET ?= $(LINUX_TUPLE)-g++
+GLIBC_CC_FOR_TARGET ?= $(INSTALL_DIR)/bin/$(LINUX_TUPLE)-gcc
+GLIBC_CXX_FOR_TARGET ?= $(INSTALL_DIR)/bin/$(LINUX_TUPLE)-g++
 GLIBC_TARGET_BOARDS ?= $(shell $(srcdir)/scripts/generate_target_board \
   --sim-name riscv-sim \
   --cmodel $(shell echo @cmodel@ | cut -d '=' -f2) \
   --build-arch-abi $(GLIBC_MULTILIB_NAMES) \
   --extra-test-arch-abi-flags-list "$(EXTRA_MULTILIB_TEST)")
 
-NEWLIB_CC_FOR_TARGET ?= $(NEWLIB_TUPLE)-gcc
-NEWLIB_CXX_FOR_TARGET ?= $(NEWLIB_TUPLE)-g++
+NEWLIB_CC_FOR_TARGET ?= $(INSTALL_DIR)/bin/$(NEWLIB_TUPLE)-gcc
+NEWLIB_CXX_FOR_TARGET ?= $(INSTALL_DIR)/bin/$(NEWLIB_TUPLE)-g++
 NEWLIB_TARGET_BOARDS ?= $(shell $(srcdir)/scripts/generate_target_board \
   --sim-name riscv-sim \
   --cmodel $(shell echo @cmodel@ | cut -d '=' -f2) \
@@ -347,7 +348,7 @@ stamps/build-binutils-linux: $(BINUTILS_SRCDIR) $(BINUTILS_SRC_GIT) stamps/check
 		--disable-libdecnumber \
 		--disable-readline \
 		$(WITH_ISA_SPEC)
-	$(MAKE) -C $(notdir $@)
+	$(MAKE) -C $(notdir $@) LDFLAGS="--static"
 	$(MAKE) -C $(notdir $@) install
 	mkdir -p $(dir $@) && touch $@
 
@@ -371,7 +372,7 @@ stamps/build-gdb-linux: $(GDB_SRCDIR) $(GDB_SRC_GIT)
 		--disable-ld \
 		--disable-gold \
 		--disable-gprof
-	$(MAKE) -C $(notdir $@)
+	$(MAKE) -C $(notdir $@) LDFLAGS="--static"
 	$(MAKE) -C $(notdir $@) install
 	mkdir -p $(dir $@) && touch $@
 
@@ -635,6 +636,7 @@ stamps/build-newlib: $(NEWLIB_SRCDIR) $(NEWLIB_SRC_GIT) stamps/build-gcc-newlib-
 	rm -rf $@ $(notdir $@)
 	mkdir $(notdir $@)
 	cd $(notdir $@) && $</configure \
+		CC=$(NEWLIB_CC_FOR_TARGET) \
 		--target=$(NEWLIB_TUPLE) \
 		$(CONFIGURE_HOST) \
 		--prefix=$(INSTALL_DIR) \
@@ -652,7 +654,8 @@ stamps/build-newlib-nano: $(NEWLIB_SRCDIR) $(NEWLIB_SRC_GIT) stamps/build-gcc-ne
 	rm -rf $@ $(notdir $@)
 	mkdir $(notdir $@)
 	cd $(notdir $@) && $</configure \
-		--target=$(NEWLIB_TUPLE) \
+		-CC=$(NEWLIB_CC_FOR_TARGET) \
+		-target=$(NEWLIB_TUPLE) \
 		$(CONFIGURE_HOST) \
 		--prefix=$(builddir)/install-newlib-nano \
 		--enable-newlib-reent-small \
@@ -874,7 +877,10 @@ stamps/build-spike: $(SPIKE_SRCDIR) $(SPIKE_SRC_GIT)
 	rm -rf $@ $(notdir $@)
 	mkdir $(notdir $@)
 	cd $(notdir $@) && $</configure \
-		--prefix=$(INSTALL_DIR)
+		--prefix=$(INSTALL_DIR) \
+		--without-boost \
+		--without-boost-asio \
+		--without-boost-regex
 	$(MAKE) -C $(notdir $@)
 	$(MAKE) -C $(notdir $@) install
 	mkdir -p $(dir $@)
@@ -887,7 +893,8 @@ stamps/build-pk32: $(PK_SRCDIR) $(PK_SRC_GIT) stamps/build-gcc-newlib-stage2
 		--prefix=$(INSTALL_DIR) \
 		--host=$(NEWLIB_TUPLE) \
 		--with-arch=rv32gc \
-		--with-abi=ilp32f
+		--with-abi=ilp32d \
+                CC=$(INSTALL_DIR)/bin/$(NEWLIB_TUPLE)-gcc
 	$(MAKE) -C $(notdir $@)
 	cp $(notdir $@)/pk $(INSTALL_DIR)/$(NEWLIB_TUPLE)/bin/pk32
 	mkdir -p $(dir $@)
@@ -900,7 +907,8 @@ stamps/build-pk64: $(PK_SRCDIR) $(PK_SRC_GIT) stamps/build-gcc-newlib-stage2
 		--prefix=$(INSTALL_DIR) \
 		--host=$(NEWLIB_TUPLE) \
 		--with-arch=rv64gc \
-		--with-abi=lp64d
+		--with-abi=lp64d \
+                CC=$(INSTALL_DIR)/bin/$(NEWLIB_TUPLE)-gcc
 	$(MAKE) -C $(notdir $@)
 	cp $(notdir $@)/pk $(INSTALL_DIR)/$(NEWLIB_TUPLE)/bin/pk64
 	mkdir -p $(dir $@)
@@ -1064,14 +1072,14 @@ stamps/check-gdb-linux: stamps/build-gcc-linux-stage2 stamps/build-gdb-linux $(S
 
 .PHONY: report-gcc-newlib report-gcc-newlib-nano
 report-gcc-newlib: stamps/check-gcc-newlib
-	$(srcdir)/scripts/testsuite-filter gcc newlib $(srcdir)/test/allowlist `find build-gcc-newlib-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
+	$(srcdir)/scripts/testsuite-filter gcc newlib $(SIM)  $(srcdir)/test/allowlist `find build-gcc-newlib-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
 
 report-gcc-newlib-nano: stamps/check-gcc-newlib-nano
-	$(srcdir)/scripts/testsuite-filter gcc newlib-nano $(srcdir)/test/allowlist `find build-gcc-newlib-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
+	$(srcdir)/scripts/testsuite-filter gcc newlib-nano $(SIM) $(srcdir)/test/allowlist `find build-gcc-newlib-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
 
 .PHONY: report-gcc-linux
 report-gcc-linux: stamps/check-gcc-linux
-	$(srcdir)/scripts/testsuite-filter gcc glibc $(srcdir)/test/allowlist `find build-gcc-linux-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
+	$(srcdir)/scripts/testsuite-filter gcc glibc $(SIM) $(srcdir)/test/allowlist `find build-gcc-linux-stage2/gcc/testsuite/ -name *.sum |paste -sd "," -`
 
 .PHONY: report-dhrystone-newlib report-dhrystone-newlib-nano
 report-dhrystone-newlib: $(patsubst %,stamps/check-dhrystone-newlib-%,$(NEWLIB_MULTILIB_NAMES))
@@ -1085,18 +1093,18 @@ report-dhrystone-linux: $(patsubst %,stamps/check-dhrystone-linux-%,$(GLIBC_MULT
 
 .PHONY: report-binutils-newlib report-binutils-newlib-nano
 report-binutils-newlib: stamps/check-binutils-newlib
-	$(srcdir)/scripts/testsuite-filter binutils newlib \
+	$(srcdir)/scripts/testsuite-filter binutils newlib $(SIM) \
 	    $(srcdir)/test/allowlist \
 	    `find build-binutils-newlib/ -name *.sum |paste -sd "," -`
 
 report-binutils-newlib-nano: stamps/check-binutils-newlib-nano
-	$(srcdir)/scripts/testsuite-filter binutils newlib-nano \
+	$(srcdir)/scripts/testsuite-filter binutils newlib-nano $(SIM) \
 	    $(srcdir)/test/allowlist \
 	    `find build-binutils-newlib/ -name *.sum |paste -sd "," -`
 
 .PHONY: report-binutils-linux
 report-binutils-linux: stamps/check-binutils-linux
-	$(srcdir)/scripts/testsuite-filter binutils glibc \
+	$(srcdir)/scripts/testsuite-filter binutils glibc $(SIM) \
 	    $(srcdir)/test/allowlist \
 	    `find build-binutils-linux/ -name *.sum |paste -sd "," -`
 
